@@ -5,6 +5,18 @@ use bevy::{
 };
 use ron::de::from_reader;
 use serde::Deserialize;
+use ship::ShipPlugin;
+
+mod ship;
+
+pub mod prelude {
+    pub use bevy::prelude::*;
+    pub use crate::GameState;
+    pub use crate::AnimationTimer;
+}
+
+#[derive(Component, Deref, DerefMut)]
+pub struct AnimationTimer(Timer);
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Copy)]
 pub enum GameState {
@@ -35,10 +47,12 @@ fn main() {
             resizable: init_data.resizable,
             ..Default::default()
         })
+        .add_startup_system(system_setup)
         .add_plugins(DefaultPlugins)
+        .add_plugin(ShipPlugin)
         .add_system(bevy::input::system::exit_on_esc_system)
-        .add_plugin(bevy::diagnostic::LogDiagnosticsPlugin::default())
-        .add_plugin(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
+        // .add_plugin(bevy::diagnostic::LogDiagnosticsPlugin::default())
+        // .add_plugin(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
         .run();
 }
 
@@ -46,4 +60,8 @@ fn main() {
 fn load_init_data() -> InitializeData {
     let file = File::open("resources/init_data.ron").expect("Failed opening file");
     from_reader(file).expect("Unable to load initialization data")
+}
+
+fn system_setup(mut commands: Commands) {
+    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
 }
