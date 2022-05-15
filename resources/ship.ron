@@ -1,0 +1,17 @@
+ShipInformation(
+    max_speed: 45.0,
+    asset_information: AssetInformation(
+        sprite_image: "ship.png",
+        tile_size: Vec2(16.0, 16.0),
+        columns: 8,
+        rows: 1
+    ),
+    controls: ShipControls(
+        forward: Up,
+        rotate_right: Right,
+        backwards: Down,
+        rotate_left: Left,
+        // shoot: KeyCode::Space
+    ),
+    scale: 1.5
+)
