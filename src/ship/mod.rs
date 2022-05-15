@@ -1,5 +1,7 @@
 use crate::prelude::*;
 
+const SHIP_SPEED: f32 = 25.0;
+
 pub struct ShipPlugin;
 
 impl Plugin for ShipPlugin {
@@ -21,7 +23,7 @@ fn setup(
     mut texture_atlas_assets: ResMut<Assets<TextureAtlas>>,
 ) {
     let texture_handle = asset_server.load("ship.png");
-    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(16.0 , 16.0), 4, 1);
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(16.0 , 16.0), 8, 1);
     let texture_atlas_handle = texture_atlas_assets.add(texture_atlas);
 
     commands.spawn_bundle(SpriteSheetBundle {
@@ -57,29 +59,55 @@ fn move_ship(
     let (mut ship_transform, mut sprite) = query.single_mut();
     let mut sprite_index = sprite.index;
 
-    if keyboard_input.pressed(KeyCode::Right) {
+    // up & right
+    if keyboard_input.pressed(KeyCode::W) && keyboard_input.pressed(KeyCode::D) {
         x_direction += 1.0;
+        y_direction += 1.0;
         sprite_index = 1;
     }
-
-    if keyboard_input.pressed(KeyCode::Left) {
-        x_direction -= 1.0;
+    // down & right
+    else if keyboard_input.pressed(KeyCode::S) && keyboard_input.pressed(KeyCode::D) {
+        x_direction += 1.0;
+        y_direction -= 1.0;
         sprite_index = 3;
     }
-
-    if keyboard_input.pressed(KeyCode::Up) {
+    // down & left
+    else if keyboard_input.pressed(KeyCode::S) && keyboard_input.pressed(KeyCode::A) {
+        x_direction -= 1.0;
+        y_direction -= 1.0;
+        sprite_index = 5;
+    }
+    // up & left
+    else if keyboard_input.pressed(KeyCode::W) && keyboard_input.pressed(KeyCode::A) {
+        x_direction -= 1.0;
+        y_direction += 1.0;
+        sprite_index = 7;
+    }
+    // up
+    else if keyboard_input.pressed(KeyCode::W) {
         y_direction += 1.0;
         sprite_index = 0;
     }
-
-    if keyboard_input.pressed(KeyCode::Down) {
-        y_direction -= 1.0;
+    // right
+    else if keyboard_input.pressed(KeyCode::D) {
+        x_direction += 1.0;
         sprite_index = 2;
     }
-    let new_position_y = ship_transform.translation.y + y_direction * 5.0 * time.delta_seconds();
-    let new_position_x = ship_transform.translation.x + x_direction * 5.0 * time.delta_seconds();
+    // down
+    else if keyboard_input.pressed(KeyCode::S) {
+        y_direction -= 1.0;
+        sprite_index = 4;
+    }
+    // left
+    else if keyboard_input.pressed(KeyCode::A) {
+        x_direction -= 1.0;
+        sprite_index = 6;
+    }
 
-    ship_transform.translation.y = dbg!(new_position_y);
-    ship_transform.translation.x = dbg!(new_position_x);
-    sprite.index = dbg!(sprite_index);
+    let new_position_y = ship_transform.translation.y + y_direction * SHIP_SPEED * time.delta_seconds();
+    let new_position_x = ship_transform.translation.x + x_direction * SHIP_SPEED * time.delta_seconds();
+
+    ship_transform.translation.y = new_position_y;
+    ship_transform.translation.x = new_position_x;
+    sprite.index = sprite_index;
 }
