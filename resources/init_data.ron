@@ -1,6 +1,6 @@
 InitializeData(
     width: 800.0,
     height: 600.0,
-    title: "Give me a name!",
+    title: "Asteroids!",
     resizable: false
 )

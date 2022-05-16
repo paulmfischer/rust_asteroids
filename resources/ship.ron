@@ -1,5 +1,6 @@
 ShipInformation(
     max_speed: 45.0,
+    acceleration: 4,
     asset_information: AssetInformation(
         sprite_image: "ship.png",
         tile_size: Vec2(16.0, 16.0),
