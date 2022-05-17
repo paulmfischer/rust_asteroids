@@ -10,13 +10,13 @@ use ship::ShipPlugin;
 mod ship;
 
 pub mod prelude {
+    pub use std::fs::File;
     pub use bevy::prelude::*;
+    pub use ron::de::from_reader;
+    pub use serde::Deserialize;
     pub use crate::GameState;
-    pub use crate::AnimationTimer;
+    pub use crate::AssetInformation;
 }
-
-#[derive(Component, Deref, DerefMut)]
-pub struct AnimationTimer(Timer);
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Copy)]
 pub enum GameState {
@@ -33,6 +33,14 @@ pub struct InitializeData {
     height: f32,
     title: String,
     resizable: bool,
+}
+
+#[derive(Clone, Deserialize, Debug)]
+pub struct AssetInformation {
+    sprite_image: String,
+    tile_size: Vec2,
+    columns: usize,
+    rows: usize,
 }
 
 fn main() {
