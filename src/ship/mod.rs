@@ -1,10 +1,14 @@
 use crate::prelude::*;
+use self::projectile::ProjectilePlugin;
+
+mod projectile;
 
 pub struct ShipPlugin;
 
 impl Plugin for ShipPlugin {
     fn build(&self, app: &mut App) {
         app
+            .add_plugin(ProjectilePlugin)
             .add_startup_system(setup)
             .add_system(move_ship)
             ;
@@ -83,8 +87,12 @@ fn setup(
 fn move_ship(
     time: Res<Time>,
     keyboard_input: Res<Input<KeyCode>>,
+    windows: Res<Windows>,
     mut query: Query<(&mut VelocityTimer, &mut Transform, &mut TextureAtlasSprite, &mut Ship), With<Ship>>,
 ) {
+    let window = windows.primary();
+    let height_boundary = window.height() / 2.0;
+    let width_boundary = window.width() / 2.0;
     let (mut velocity_timer, mut ship_transform, mut sprite, mut ship) = query.single_mut();
     let mut sprite_index = sprite.index;
     let mut y_direction = 0.0;
@@ -152,8 +160,21 @@ fn move_ship(
         }
     }
 
-    let new_position_y = ship_transform.translation.y + ship.direction.y * ship.velocity * time.delta_seconds();
-    let new_position_x = ship_transform.translation.x + ship.direction.x * ship.velocity * time.delta_seconds();
+    let mut new_position_y = ship_transform.translation.y + ship.direction.y * ship.velocity * time.delta_seconds();
+    let mut new_position_x = ship_transform.translation.x + ship.direction.x * ship.velocity * time.delta_seconds();
+
+    // warp ship around to oppisite side if it crosses a boundary (window edge)
+    if new_position_x > width_boundary {
+        new_position_x = -width_boundary;
+    } else if new_position_x < -width_boundary {
+        new_position_x = width_boundary;
+    }
+
+    if new_position_y > height_boundary {
+        new_position_y = -height_boundary;
+    } else if new_position_y < -height_boundary {
+        new_position_y = height_boundary;
+    }
 
     ship_transform.translation.y = new_position_y;
     ship_transform.translation.x = new_position_x;

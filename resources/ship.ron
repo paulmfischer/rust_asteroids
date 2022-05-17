@@ -16,3 +16,12 @@ ShipInformation(
     ),
     scale: 1.5
 )
+
+// Ship colors htlm notation:
+// 223075
+// 22304b
+
+// projectile colors html notation:
+// 086029
+// 29773f
+// 49955a
