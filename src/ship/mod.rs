@@ -29,8 +29,7 @@ struct ShipInformation {
     max_speed: f32,
     acceleration: f32,
     asset_information: AssetInformation,
-    controls: ShipControls,
-    scale: f32,
+    controls: ShipControls
 }
 
 impl ShipInformation {
@@ -58,7 +57,7 @@ impl From<ShipInformation> for Ship {
             controls: ship_info.controls,
             max_speed: ship_info.max_speed,
             velocity: 0.0,
-            direction: Vec2::new(0.0, 1.0),
+            direction: Vec2::Y,
             acceleration: ship_info.acceleration,
         }
     }
@@ -77,7 +76,11 @@ fn setup(
 
     commands.spawn_bundle(SpriteSheetBundle {
         texture_atlas: texture_atlas_handle,
-        transform: Transform::from_scale(Vec3::splat(ship_info.scale)),
+        transform: Transform {
+            translation: Vec3::new(0.0, 0.0, 15.0), // put ship closer to be on top of projectiles
+            scale: Vec3::splat(ship_info.asset_information.scale),
+            ..default()
+        },
         ..default()
     })
     .insert(Ship::from(ship_info))
@@ -87,12 +90,9 @@ fn setup(
 fn move_ship(
     time: Res<Time>,
     keyboard_input: Res<Input<KeyCode>>,
-    windows: Res<Windows>,
+    game_data: Res<GameData>,
     mut query: Query<(&mut VelocityTimer, &mut Transform, &mut TextureAtlasSprite, &mut Ship), With<Ship>>,
 ) {
-    let window = windows.primary();
-    let height_boundary = window.height() / 2.0;
-    let width_boundary = window.width() / 2.0;
     let (mut velocity_timer, mut ship_transform, mut sprite, mut ship) = query.single_mut();
     let mut sprite_index = sprite.index;
     let mut y_direction = 0.0;
@@ -164,16 +164,16 @@ fn move_ship(
     let mut new_position_x = ship_transform.translation.x + ship.direction.x * ship.velocity * time.delta_seconds();
 
     // warp ship around to oppisite side if it crosses a boundary (window edge)
-    if new_position_x > width_boundary {
-        new_position_x = -width_boundary;
-    } else if new_position_x < -width_boundary {
-        new_position_x = width_boundary;
+    if new_position_x > game_data.window.width_boundary {
+        new_position_x = -game_data.window.width_boundary;
+    } else if new_position_x < -game_data.window.width_boundary {
+        new_position_x = game_data.window.width_boundary;
     }
 
-    if new_position_y > height_boundary {
-        new_position_y = -height_boundary;
-    } else if new_position_y < -height_boundary {
-        new_position_y = height_boundary;
+    if new_position_y > game_data.window.height_boundary {
+        new_position_y = -game_data.window.height_boundary;
+    } else if new_position_y < -game_data.window.height_boundary {
+        new_position_y = game_data.window.height_boundary;
     }
 
     ship_transform.translation.y = new_position_y;
