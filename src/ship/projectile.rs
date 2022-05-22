@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::prelude::*;
 
 use super::Ship;
@@ -36,6 +38,12 @@ struct ProjectileLoad {
 }
 
 #[derive(Component)]
+struct ProjectileTime {
+    /// track when the projectile should evaporate (non-repeating timer)
+    timer: Timer,
+}
+
+#[derive(Component)]
 struct Projectile {
     velocity: f32,
     direction: Vec2,
@@ -45,7 +53,7 @@ impl Projectile {
     fn from(ship: &Ship, velocity: f32) -> Self {
         Projectile {
             velocity,
-            direction: ship.direction,
+            direction: ship.direction
         }
     }
 }
@@ -68,6 +76,7 @@ fn setup(
 }
 
 fn create_projectile(
+    time: Res<Time>,
     mut commands: Commands,
     keyboard_input: Res<Input<KeyCode>>,
     projectile_load: Res<ProjectileLoad>,
@@ -84,23 +93,40 @@ fn create_projectile(
             transform: Transform {
                 translation: starting_location,
                 rotation: Quat::from_rotation_arc_2d(Vec2::Y, projectile.direction),
-                scale: Vec3::new(1.0, projectile_load.asset_info.scale, 1.0), // Vec3::splat(projectile_load.asset_info.scale),
+                scale: Vec3::new(1.0, projectile_load.asset_info.scale, 1.0),
                 ..default()
             },
             ..default()
         })
-        .insert(projectile);
+        .insert(projectile)
+        .insert(ProjectileTime {
+            timer: Timer::new(Duration::from_secs(6), false)
+        });
     }
 }
 
 fn move_projectile(
     time: Res<Time>,
+    game_data: Res<GameData>,
     mut query: Query<(&mut Transform, &Projectile), With<Projectile>>
 ) {
     for (mut projectile_transform, projectile) in query.iter_mut() {
-        let new_position_x = projectile_transform.translation.x + projectile.direction.x * projectile.velocity * time.delta_seconds();
-        let new_position_y = projectile_transform.translation.y + projectile.direction.y * projectile.velocity * time.delta_seconds();
-    
+        let mut new_position_x = projectile_transform.translation.x + projectile.direction.x * projectile.velocity * time.delta_seconds();
+        let mut new_position_y = projectile_transform.translation.y + projectile.direction.y * projectile.velocity * time.delta_seconds();
+
+        // warp ship around to oppisite side if it crosses a boundary (window edge)
+        if new_position_x > game_data.window.width_boundary {
+            new_position_x = -game_data.window.width_boundary;
+        } else if new_position_x < -game_data.window.width_boundary {
+            new_position_x = game_data.window.width_boundary;
+        }
+
+        if new_position_y > game_data.window.height_boundary {
+            new_position_y = -game_data.window.height_boundary;
+        } else if new_position_y < -game_data.window.height_boundary {
+            new_position_y = game_data.window.height_boundary;
+        }
+
         projectile_transform.translation.x = new_position_x;
         projectile_transform.translation.y = new_position_y;
     }
@@ -108,15 +134,14 @@ fn move_projectile(
 
 fn destroy_projectile(
     mut commands: Commands,
-    windows: Res<Windows>,
-    query: Query<(&Transform, Entity), With<Projectile>>
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut ProjectileTime), With<Projectile>>
 ) {
-    let window = windows.primary();
-    let height_boundary = window.height() / 2.0;
-    let width_boundary = window.width() / 2.0;
 
-    for (proj_trans, entity) in query.iter() {
-        if proj_trans.translation.x.abs() > width_boundary || proj_trans.translation.y.abs() > height_boundary {
+    for (entity, mut projectile_timer) in query.iter_mut() {
+        projectile_timer.timer.tick(time.delta());
+
+        if projectile_timer.timer.finished() {
             commands.entity(entity).despawn();
         }
     }
