@@ -5,7 +5,8 @@ ShipInformation(
         sprite_image: "ship.png",
         tile_size: Vec2(16.0, 16.0),
         columns: 8,
-        rows: 1
+        rows: 1,
+        scale: 1.5
     ),
     controls: ShipControls(
         forward: Up,
@@ -14,7 +15,6 @@ ShipInformation(
         rotate_left: Left,
         // shoot: KeyCode::Space
     ),
-    scale: 1.5
 )
 
 // Ship colors htlm notation:

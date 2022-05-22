@@ -16,6 +16,7 @@ pub mod prelude {
     pub use serde::Deserialize;
     pub use crate::GameState;
     pub use crate::AssetInformation;
+    pub use crate::GameData;
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Copy)]
@@ -26,6 +27,29 @@ pub enum GameState {
     GameOver,
     Exit,
 }
+
+pub struct WindowData {
+    width_boundary: f32,
+    height_boundary: f32,
+}
+
+pub struct GameData {
+    window: WindowData,
+    score: i16,
+}
+
+impl GameData {
+    fn new(width: f32, height: f32) -> Self {
+        GameData {
+            window: WindowData {
+                width_boundary: width / 2.0,
+                height_boundary: height / 2.0,
+            },
+            score: 0,
+        }
+    }
+}
+
 
  #[derive(Clone, Deserialize, Debug)]
 pub struct InitializeData {
@@ -41,6 +65,7 @@ pub struct AssetInformation {
     tile_size: Vec2,
     columns: usize,
     rows: usize,
+    scale: f32,
 }
 
 fn main() {
@@ -55,6 +80,7 @@ fn main() {
             resizable: init_data.resizable,
             ..Default::default()
         })
+        .insert_resource(GameData::new(init_data.width, init_data.height))
         .add_startup_system(system_setup)
         .add_plugins(DefaultPlugins)
         .add_plugin(ShipPlugin)

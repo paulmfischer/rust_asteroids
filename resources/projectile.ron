@@ -1,0 +1,10 @@
+ProjectileInfo(
+    velocity: 65.0,
+    asset_info: AssetInformation(
+        sprite_image: "projectile.png",
+        tile_size: Vec2(8.0, 8.0),
+        columns: 1,
+        rows: 1,
+        scale: 1.7
+    )
+)
