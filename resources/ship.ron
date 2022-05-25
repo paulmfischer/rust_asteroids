@@ -13,7 +13,7 @@ ShipInformation(
         rotate_right: Right,
         backwards: Down,
         rotate_left: Left,
-        // shoot: KeyCode::Space
+        shoot: Space
     ),
 )
 
@@ -25,3 +25,8 @@ ShipInformation(
 // 086029
 // 29773f
 // 49955a
+
+// asteroid colors html notation:
+// 3d3f48
+// 131519
+// 4c4d57

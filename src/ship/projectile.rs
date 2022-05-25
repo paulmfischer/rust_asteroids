@@ -76,14 +76,13 @@ fn setup(
 }
 
 fn create_projectile(
-    time: Res<Time>,
     mut commands: Commands,
     keyboard_input: Res<Input<KeyCode>>,
     projectile_load: Res<ProjectileLoad>,
     query: Query<(&Ship, &Transform)>,
 ) {
-    if keyboard_input.just_pressed(KeyCode::Space) {
-        let (ship, ship_transform) = query.single();
+    let (ship, ship_transform) = query.single();
+    if keyboard_input.just_pressed(ship.controls.shoot) {
         let projectile = Projectile::from(ship, projectile_load.velocity);
         let projectile_position = 15.0;
         let starting_location = ship_transform.translation + Vec3::new(projectile.direction.x, projectile.direction.y, 1.0) * Vec3::new(projectile_position, projectile_position, 1.0);

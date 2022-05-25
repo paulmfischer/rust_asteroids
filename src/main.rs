@@ -6,8 +6,10 @@ use bevy::{
 use ron::de::from_reader;
 use serde::Deserialize;
 use ship::ShipPlugin;
+use asteroid::AsteroidPlugin;
 
 mod ship;
+mod asteroid;
 
 pub mod prelude {
     pub use std::fs::File;
@@ -84,6 +86,7 @@ fn main() {
         .add_startup_system(system_setup)
         .add_plugins(DefaultPlugins)
         .add_plugin(ShipPlugin)
+        .add_plugin(AsteroidPlugin)
         .add_system(bevy::input::system::exit_on_esc_system)
         // .add_plugin(bevy::diagnostic::LogDiagnosticsPlugin::default())
         // .add_plugin(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())

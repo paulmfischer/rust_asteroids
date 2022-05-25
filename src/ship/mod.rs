@@ -21,7 +21,7 @@ struct ShipControls {
     backwards: KeyCode,
     rotate_right: KeyCode,
     rotate_left: KeyCode,
-    // shoot: KeyCode,
+    shoot: KeyCode,
 }
 
 #[derive(Clone, Deserialize, Debug)]
