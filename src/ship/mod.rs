@@ -2,7 +2,6 @@ use crate::prelude::*;
 use self::projectile::ProjectilePlugin;
 
 mod projectile;
-
 pub struct ShipPlugin;
 
 impl Plugin for ShipPlugin {
@@ -10,8 +9,7 @@ impl Plugin for ShipPlugin {
         app
             .add_plugin(ProjectilePlugin)
             .add_startup_system(setup)
-            .add_system(move_ship)
-            ;
+            .add_system(move_ship);
     }
 }
 
@@ -46,9 +44,11 @@ struct VelocityTimer(Timer);
 struct Ship {
     controls: ShipControls,
     max_speed: f32,
-    velocity: f32,
     acceleration: f32,
-    direction: Vec2,
+    heading_direction: Vec3,
+    current_speed: f32,
+    rotation_speed: f32,
+    rotation_direction: Vec3,
 }
 
 impl From<ShipInformation> for Ship {
@@ -56,9 +56,11 @@ impl From<ShipInformation> for Ship {
          Ship {
             controls: ship_info.controls,
             max_speed: ship_info.max_speed,
-            velocity: 0.0,
-            direction: Vec2::Y,
             acceleration: ship_info.acceleration,
+            heading_direction: Vec3::Y,
+            current_speed: 0.0,
+            rotation_speed: f32::to_radians(360.0),
+            rotation_direction: Vec3::Y,
         }
     }
 }
@@ -71,7 +73,7 @@ fn setup(
 ) {
     let ship_info = ShipInformation::load();
     let texture_handle = asset_server.load(&ship_info.asset_information.sprite_image);
-    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::from(ship_info.asset_information.tile_size), ship_info.asset_information.columns, ship_info.asset_information.rows);// Vec2::new(16.0 , 16.0), 8, 1);
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::from(ship_info.asset_information.tile_size), ship_info.asset_information.columns, ship_info.asset_information.rows);
     let texture_atlas_handle = texture_atlas_assets.add(texture_atlas);
 
     commands.spawn_bundle(SpriteSheetBundle {
@@ -90,93 +92,65 @@ fn setup(
 fn move_ship(
     time: Res<Time>,
     keyboard_input: Res<Input<KeyCode>>,
+    mut query: Query<(&mut VelocityTimer, &mut Ship, &mut Transform)>,
     game_data: Res<GameData>,
-    mut query: Query<(&mut VelocityTimer, &mut Transform, &mut TextureAtlasSprite, &mut Ship), With<Ship>>,
 ) {
-    let (mut velocity_timer, mut ship_transform, mut sprite, mut ship) = query.single_mut();
-    let mut sprite_index = sprite.index;
-    let mut y_direction = 0.0;
-    let mut x_direction = 0.0;
 
-    // up & right
-    if keyboard_input.pressed(ship.controls.forward) && keyboard_input.pressed(ship.controls.rotate_right) {
-        x_direction += 0.75;
-        y_direction += 0.75;
-        ship.direction = Vec2::new(0.75, 0.75);
-        sprite_index = 1;
-    }
-    // down & right
-    else if keyboard_input.pressed(ship.controls.backwards) && keyboard_input.pressed(ship.controls.rotate_right) {
-        x_direction += 0.75;
-        y_direction -= 0.75;
-        ship.direction = Vec2::new(0.75, -0.75);
-        sprite_index = 3;
-    }
-    // down & left
-    else if keyboard_input.pressed(ship.controls.backwards) && keyboard_input.pressed(ship.controls.rotate_left) {
-        x_direction -= 0.75;
-        y_direction -= 0.75;
-        ship.direction = Vec2::new(-0.75, -0.75);
-        sprite_index = 5;
-    }
-    // up & left
-    else if keyboard_input.pressed(ship.controls.forward) && keyboard_input.pressed(ship.controls.rotate_left) {
-        x_direction -= 0.75;
-        y_direction += 0.75;
-        ship.direction = Vec2::new(-0.75, 0.75);
-        sprite_index = 7;
-    }
-    // up
-    else if keyboard_input.pressed(ship.controls.forward) {
-        y_direction += 1.0;
-        ship.direction = Vec2::new(0.0, 1.0);
-        sprite_index = 0;
-    }
-    // right
-    else if keyboard_input.pressed(ship.controls.rotate_right) {
-        x_direction += 1.0;
-        ship.direction = Vec2::new(1.0, 0.0);
-        sprite_index = 2;
-    }
-    // down
-    else if keyboard_input.pressed(ship.controls.backwards) {
-        y_direction -= 1.0;
-        ship.direction = Vec2::new(0.0, -1.0);
-        sprite_index = 4;
-    }
-    // left
-    else if keyboard_input.pressed(ship.controls.rotate_left) {
-        x_direction -= 1.0;
-        ship.direction = Vec2::new(-1.0, 0.0);
-        sprite_index = 6;
+    let (mut velocity_timer, mut ship, mut ship_transform) = query.single_mut();
+    let mut rotation_factor = 0.0;
+
+    if keyboard_input.pressed(ship.controls.rotate_left) {
+        rotation_factor += 1.0;
     }
 
+    if keyboard_input.pressed(ship.controls.rotate_right) {
+        rotation_factor -= 1.0;
+    }
+    
+    let rotation_delta = Quat::from_rotation_z(rotation_factor * ship.rotation_speed * time.delta_seconds());
+    ship_transform.rotation *= rotation_delta;
+    ship.rotation_direction = ship_transform.rotation * Vec3::Y;
+
+    if keyboard_input.pressed(ship.controls.forward) {
+        if ship.current_speed < 0.0 {
+            ship.current_speed = 0.0;
+        }
+        ship.current_speed += ship.acceleration;
+        ship.heading_direction = ship_transform.rotation * Vec3::Y;
+    } else if keyboard_input.pressed(ship.controls.backwards) {
+        if ship.current_speed > 0.0 {
+            ship.current_speed = 0.0;
+        }
+        ship.current_speed -= ship.acceleration;
+        ship.heading_direction = ship_transform.rotation * Vec3::Y;
+    }
+    
+    ship.current_speed = ship.current_speed.clamp(-ship.max_speed, ship.max_speed);
+    let movement_distance = ship.current_speed * time.delta_seconds();
+    let translation_delta = ship.heading_direction * movement_distance;
+    let mut new_translation = ship_transform.translation + translation_delta;
+    
     velocity_timer.tick(time.delta());
     if velocity_timer.just_finished() {
-        if y_direction == 0.0 && x_direction == 0.0 {
-            ship.velocity = (ship.velocity - ship.acceleration).clamp(0.0, ship.max_speed);
-        } else {
-            ship.velocity = (ship.velocity + ship.acceleration).clamp(0.0, ship.max_speed);
+        if ship.current_speed > 0.0 {
+            ship.current_speed -= ship.acceleration;
+        } else if ship.current_speed < 0.0 {
+            ship.current_speed += ship.acceleration;
         }
     }
 
-    let mut new_position_y = ship_transform.translation.y + ship.direction.y * ship.velocity * time.delta_seconds();
-    let mut new_position_x = ship_transform.translation.x + ship.direction.x * ship.velocity * time.delta_seconds();
-
     // warp ship around to oppisite side if it crosses a boundary (window edge)
-    if new_position_x > game_data.window.width_boundary {
-        new_position_x = -game_data.window.width_boundary;
-    } else if new_position_x < -game_data.window.width_boundary {
-        new_position_x = game_data.window.width_boundary;
+    if new_translation.x > game_data.window.width_boundary {
+        new_translation.x = -game_data.window.width_boundary;
+    } else if new_translation.x < -game_data.window.width_boundary {
+        new_translation.x = game_data.window.width_boundary;
     }
 
-    if new_position_y > game_data.window.height_boundary {
-        new_position_y = -game_data.window.height_boundary;
-    } else if new_position_y < -game_data.window.height_boundary {
-        new_position_y = game_data.window.height_boundary;
+    if new_translation.y > game_data.window.height_boundary {
+        new_translation.y = -game_data.window.height_boundary;
+    } else if new_translation.y < -game_data.window.height_boundary {
+        new_translation.y = game_data.window.height_boundary;
     }
-
-    ship_transform.translation.y = new_position_y;
-    ship_transform.translation.x = new_position_x;
-    sprite.index = sprite_index;
+    
+    ship_transform.translation = new_translation;
 }

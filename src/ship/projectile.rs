@@ -19,6 +19,7 @@ impl Plugin for ProjectilePlugin {
 #[derive(Deserialize)]
 struct ProjectileInfo {
     velocity: f32,
+    duration: f32,
     asset_info: AssetInformation,
 }
 
@@ -35,6 +36,7 @@ struct ProjectileLoad {
     handle: Handle<TextureAtlas>,
     asset_info: AssetInformation,
     velocity: f32,
+    duration: f32,
 }
 
 #[derive(Component)]
@@ -46,14 +48,14 @@ struct ProjectileTime {
 #[derive(Component)]
 struct Projectile {
     velocity: f32,
-    direction: Vec2,
+    direction: Vec3,
 }
 
 impl Projectile {
     fn from(ship: &Ship, velocity: f32) -> Self {
         Projectile {
             velocity,
-            direction: ship.direction
+            direction: ship.rotation_direction,
         }
     }
 }
@@ -72,11 +74,11 @@ fn setup(
         handle: texture_atlas_handle,
         asset_info: projectile_info.asset_info,
         velocity: projectile_info.velocity,
+        duration: projectile_info.duration,
     });
 }
 
 fn create_projectile(
-    time: Res<Time>,
     mut commands: Commands,
     keyboard_input: Res<Input<KeyCode>>,
     projectile_load: Res<ProjectileLoad>,
@@ -84,7 +86,12 @@ fn create_projectile(
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
         let (ship, ship_transform) = query.single();
-        let projectile = Projectile::from(ship, projectile_load.velocity);
+        let projectile_velocity = if ship.current_speed > 0.0 {
+            projectile_load.velocity + ship.current_speed
+        } else {
+            projectile_load.velocity
+        };
+        let projectile = Projectile::from(ship, projectile_velocity);
         let projectile_position = 15.0;
         let starting_location = ship_transform.translation + Vec3::new(projectile.direction.x, projectile.direction.y, 1.0) * Vec3::new(projectile_position, projectile_position, 1.0);
 
@@ -92,7 +99,7 @@ fn create_projectile(
             texture_atlas: projectile_load.handle.clone(),
             transform: Transform {
                 translation: starting_location,
-                rotation: Quat::from_rotation_arc_2d(Vec2::Y, projectile.direction),
+                rotation: Quat::from_rotation_arc(Vec3::Y, projectile.direction),
                 scale: Vec3::new(1.0, projectile_load.asset_info.scale, 1.0),
                 ..default()
             },
@@ -100,7 +107,7 @@ fn create_projectile(
         })
         .insert(projectile)
         .insert(ProjectileTime {
-            timer: Timer::new(Duration::from_secs(6), false)
+            timer: Timer::new(Duration::from_secs_f32(projectile_load.duration), false)
         });
     }
 }
@@ -137,7 +144,6 @@ fn destroy_projectile(
     time: Res<Time>,
     mut query: Query<(Entity, &mut ProjectileTime), With<Projectile>>
 ) {
-
     for (entity, mut projectile_timer) in query.iter_mut() {
         projectile_timer.timer.tick(time.delta());
 
