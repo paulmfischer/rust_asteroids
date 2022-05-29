@@ -1,5 +1,6 @@
 ProjectileInfo(
     velocity: 65.0,
+    duration: 2.8,
     asset_info: AssetInformation(
         sprite_image: "projectile.png",
         tile_size: Vec2(8.0, 8.0),

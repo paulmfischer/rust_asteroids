@@ -19,6 +19,7 @@ pub mod prelude {
     pub use crate::GameData;
 }
 
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Copy)]
 pub enum GameState {
     MainMenu,
@@ -72,6 +73,7 @@ fn main() {
     let init_data = load_init_data();
 
     App::new()
+        .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .insert_resource(WindowDescriptor {
             width: init_data.width,
             height: init_data.height,
